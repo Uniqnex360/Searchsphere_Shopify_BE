@@ -6,8 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import get_session
 from app.routes import routers
 
-
-app = FastAPI(title="Search Sphere Shopify")
+app = FastAPI(title="Search Sphere Shopify", root_path="/shopify")
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,8 +19,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for route in routers:
-    app.include_router(route)
+for r in routers:
+    app.include_router(r)
+
+# ✅ NOW inspect real routes
+# for route in app.routes:
+#     if hasattr(route, "path"):
+#         print(route.path, getattr(route, "name", None))
 
 
 @app.get("/test-db/")
