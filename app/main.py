@@ -13,6 +13,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "https://searchsphere-fe-olxj.onrender.com",
+        "https://searchsphere-shopify-fe.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
