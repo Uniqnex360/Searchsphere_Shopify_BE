@@ -10,12 +10,8 @@ app = FastAPI(title="Search Sphere Shopify", root_path="/shopify")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://searchsphere-fe-olxj.onrender.com",
-        "https://searchsphere-shopify-fe.onrender.com",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # ✅ allow everything
+    allow_credentials=False,  # ❗ must be False if using "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
