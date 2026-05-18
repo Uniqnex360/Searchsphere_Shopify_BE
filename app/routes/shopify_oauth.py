@@ -17,7 +17,7 @@ from app.settings import settings
 router = APIRouter()
 
 SHOPIFY_API_KEY = settings.shopify_api_key
-SHOPIFY_API_SECRET = settings.shopify_api_key
+SHOPIFY_API_SECRET = settings.shopify_api_secret
 SHOPIFY_SCOPES = settings.shopify_scopes
 BACKEND_URL = settings.backend_url
 FRONTEND_URL = settings.frontend_url
