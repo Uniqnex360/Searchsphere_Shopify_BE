@@ -79,29 +79,17 @@ async def auth_callback(
     received_hmac = query_params.get("hmac")
     state = query_params.get("state")
 
-    # -------------------------
-    # Validate input
-    # -------------------------
     if not shop or not code or not received_hmac:
         raise HTTPException(status_code=400, detail="Missing Shopify parameters")
 
-    # -------------------------
-    # Validate state (IMPORTANT SECURITY FIX)
-    # -------------------------
     if state not in STATE_STORE:
         raise HTTPException(status_code=400, detail="Invalid state")
 
     STATE_STORE.remove(state)
 
-    # -------------------------
-    # Verify HMAC
-    # -------------------------
     if not verify_hmac(query_params, received_hmac):
         raise HTTPException(status_code=400, detail="Invalid HMAC")
 
-    # -------------------------
-    # Exchange token (ASYNC FIX)
-    # -------------------------
     token_url = f"https://{shop}/admin/oauth/access_token"
 
     payload = {
@@ -121,13 +109,13 @@ async def auth_callback(
 
     token_data = response.json()
     access_token = token_data.get("access_token")
-    scope = token_data.get("scope")
+    scope = token_data.get("scope", "")
 
     if not access_token:
         raise HTTPException(status_code=400, detail="Missing access token")
 
     # -------------------------
-    # UPSERT STORE (FIXED)
+    # FIX IS HERE 🔥 (IMPORTANT)
     # -------------------------
     result = await session.exec(select(Store).where(Store.shop_domain == shop))
     store = result.first()
@@ -136,6 +124,8 @@ async def auth_callback(
         store.access_token = access_token
         store.scope = scope
         store.is_active = True
+
+        session.add(store)  # 🔥 THIS IS THE FIX
     else:
         store = Store(
             shop_domain=shop,
@@ -147,10 +137,8 @@ async def auth_callback(
         session.add(store)
 
     await session.commit()
+    await session.refresh(store)
 
-    # -------------------------
-    # Redirect to frontend
-    # -------------------------
     return RedirectResponse(
         url=f"{FRONTEND_URL}?shop={shop}",
         status_code=302,
