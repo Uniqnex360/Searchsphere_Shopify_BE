@@ -1,49 +1,59 @@
-import os
 import secrets
 import hashlib
 import hmac
-import requests
+import httpx
 from urllib.parse import urlencode
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import RedirectResponse
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.settings import settings
 from app.database import get_session
 from app.models import Store
+from app.helpers import utc_now
+from app.settings import settings
 
 router = APIRouter()
 
-SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
-SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET")
-SHOPIFY_SCOPES = os.getenv("SHOPIFY_SCOPES")
+SHOPIFY_API_KEY = settings.shopify_api_key
+SHOPIFY_API_SECRET = settings.shopify_api_key
+SHOPIFY_SCOPES = settings.shopify_scopes
+BACKEND_URL = settings.backend_url
+FRONTEND_URL = settings.frontend_url
 
-FRONTEND_URL = os.getenv("FRONTEND_URL")
-BACKEND_URL = os.getenv("BACKEND_URL")
+# temporary in-memory state store (replace with Redis in production)
+STATE_STORE = set()
 
 
-def verify_hmac(query_params: dict, hmac_to_check: str):
-    params = {k: v for k, v in query_params.items() if k != "hmac" and k != "signature"}
+def verify_hmac(query_params: dict, received_hmac: str) -> bool:
+    """
+    Shopify requires:
+    - remove hmac & signature
+    - sort params alphabetically
+    - url encode
+    """
 
-    sorted_params = urlencode(sorted(params.items()), doseq=True)
+    filtered = {k: v for k, v in query_params.items() if k not in ["hmac", "signature"]}
 
-    generated_hmac = hmac.new(
-        SHOPIFY_API_SECRET.encode(),
-        sorted_params.encode(),
+    message = urlencode(sorted(filtered.items()), doseq=True)
+
+    generated = hmac.new(
+        SHOPIFY_API_SECRET.encode("utf-8"),
+        message.encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
 
-    return hmac.compare_digest(generated_hmac, hmac_to_check)
+    return hmac.compare_digest(generated, received_hmac)
 
 
-# -----------------------------------
-# STEP 1: START INSTALL
-# -----------------------------------
 @router.get("/auth")
-@router.get("/auth/")
-def auth(shop: str):
+async def auth(shop: str):
+    if not shop:
+        raise HTTPException(status_code=400, detail="Missing shop")
+
     state = secrets.token_hex(16)
+    STATE_STORE.add(state)
 
     params = {
         "client_id": SHOPIFY_API_KEY,
@@ -52,91 +62,96 @@ def auth(shop: str):
         "state": state,
     }
 
-    install_url = f"https://{shop}/admin/oauth/authorize?" + urlencode(params)
+    install_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
 
     return RedirectResponse(install_url)
 
 
-# -----------------------------
-# OAuth Callback
-# -----------------------------
 @router.get("/auth/callback")
-@router.get("/auth/callback/")  # handles both trailing slash cases
-async def auth_callback(request: Request, session: AsyncSession = Depends(get_session)):
+async def auth_callback(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
     query_params = dict(request.query_params)
 
     shop = query_params.get("shop")
     code = query_params.get("code")
     received_hmac = query_params.get("hmac")
+    state = query_params.get("state")
 
-    # -----------------------------
-    # 1. Validate required params
-    # -----------------------------
+    # -------------------------
+    # Validate input
+    # -------------------------
     if not shop or not code or not received_hmac:
         raise HTTPException(status_code=400, detail="Missing Shopify parameters")
 
-    # -----------------------------
-    # 2. Verify HMAC
-    # -----------------------------
+    # -------------------------
+    # Validate state (IMPORTANT SECURITY FIX)
+    # -------------------------
+    if state not in STATE_STORE:
+        raise HTTPException(status_code=400, detail="Invalid state")
+
+    STATE_STORE.remove(state)
+
+    # -------------------------
+    # Verify HMAC
+    # -------------------------
     if not verify_hmac(query_params, received_hmac):
         raise HTTPException(status_code=400, detail="Invalid HMAC")
 
-    # -----------------------------
-    # 3. Exchange code for access token
-    # -----------------------------
+    # -------------------------
+    # Exchange token (ASYNC FIX)
+    # -------------------------
     token_url = f"https://{shop}/admin/oauth/access_token"
 
     payload = {
         "client_id": SHOPIFY_API_KEY,
         "client_secret": SHOPIFY_API_SECRET,
         "code": code,
-        "expiring": "1",
     }
 
-    response = requests.post(token_url, json=payload)
+    async with httpx.AsyncClient() as client:
+        response = await client.post(token_url, json=payload)
 
     if response.status_code != 200:
         raise HTTPException(
-            status_code=400, detail=f"Token exchange failed: {response.text}"
+            status_code=400,
+            detail=f"Token exchange failed: {response.text}",
         )
 
     token_data = response.json()
     access_token = token_data.get("access_token")
+    scope = token_data.get("scope")
 
     if not access_token:
         raise HTTPException(status_code=400, detail="Missing access token")
 
-    # -----------------------------
-    # 4. Save / Update DB (UPSERT)
-    # -----------------------------
+    # -------------------------
+    # UPSERT STORE (FIXED)
+    # -------------------------
     result = await session.exec(select(Store).where(Store.shop_domain == shop))
-    existing = result.first()
+    store = result.first()
 
-    if existing:
-        existing.access_token = access_token
-        existing.is_active = True
+    if store:
+        store.access_token = access_token
+        store.scope = scope
+        store.is_active = True
     else:
-        session.add(
-            Store(
-                shop_domain=shop,
-                access_token=access_token,
-                is_active=True,
-            )
+        store = Store(
+            shop_domain=shop,
+            access_token=access_token,
+            scope=scope,
+            is_active=True,
+            installed_at=utc_now(),
         )
+        session.add(store)
 
     await session.commit()
 
-    # -----------------------------
-    # 5. Redirect to frontend
-    # -----------------------------
-    print("redirect working")
-    print("redirect url", f"{settings.frontend_url}?shop={shop}")
-    return RedirectResponse(url=f"{settings.frontend_url}?shop={shop}", status_code=302)
-
-
-def hmac_module(data: str):
-    return hmac.new(
-        SHOPIFY_API_SECRET.encode(),
-        data.encode(),
-        hashlib.sha256,
-    ).hexdigest()
+    # -------------------------
+    # Redirect to frontend
+    # -------------------------
+    return RedirectResponse(
+        url=f"{FRONTEND_URL}?shop={shop}",
+        status_code=302,
+    )
