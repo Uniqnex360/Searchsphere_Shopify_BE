@@ -82,6 +82,7 @@ async def auth_callback(
     query_params = dict(request.query_params)
 
     shop = query_params.get("shop")
+    host = query_params.get("host")
     code = query_params.get("code")
     received_hmac = query_params.get("hmac")
     state = query_params.get("state")
@@ -152,6 +153,6 @@ async def auth_callback(
     await session.refresh(store)
 
     return RedirectResponse(
-        url=f"{FRONTEND_URL}?shop={shop}",
+        url=f"{FRONTEND_URL}?shop={shop}&host={host}",
         status_code=302,
     )
