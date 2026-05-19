@@ -127,11 +127,13 @@ async def auth_callback(
     result = await session.exec(select(Store).where(Store.shop_domain == shop))
     store = result.first()
 
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
     if store:
         store.access_token = access_token
         store.scope = scope
         store.is_active = True
-        store.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        store.updated_at = now
 
         session.add(store)  # 🔥 THIS IS THE FIX
     else:
@@ -141,6 +143,8 @@ async def auth_callback(
             scope=scope,
             is_active=True,
             installed_at=to_naive_utc(utc_now()),
+            created_at=now,  # 🔥 ADD THIS (CRITICAL)
+            updated_at=now,
         )
         session.add(store)
 
