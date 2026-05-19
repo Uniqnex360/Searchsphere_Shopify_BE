@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.services.product_index import generate_embedding
 from app.helpers import get_es
+from app.auth import ShopifySession, verify_shopify_token
 
 router = APIRouter()
 
@@ -16,6 +17,7 @@ def get_product_auto_suggestion(
     q: str = Query(..., min_length=1),
     limit: int = Query(10, le=20),
     es: Elasticsearch = Depends(get_es),
+    session: ShopifySession = Depends(verify_shopify_token),
 ):
     """
     Fast autocomplete with:
@@ -184,6 +186,7 @@ def get_products(
     # VECTOR SEARCH
     # =====================================================
     es: Elasticsearch = Depends(get_es),
+    session: ShopifySession = Depends(verify_shopify_token),
 ):
     offset = (page - 1) * size
 
