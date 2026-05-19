@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import httpx
 from urllib.parse import urlencode
+from datetime import timezone, datetime
 
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import RedirectResponse
@@ -24,6 +25,12 @@ FRONTEND_URL = settings.frontend_url
 
 # temporary in-memory state store (replace with Redis in production)
 STATE_STORE = set()
+
+
+def to_naive_utc(dt):
+    if dt is None:
+        return None
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def verify_hmac(query_params: dict, received_hmac: str) -> bool:
@@ -124,6 +131,7 @@ async def auth_callback(
         store.access_token = access_token
         store.scope = scope
         store.is_active = True
+        store.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         session.add(store)  # 🔥 THIS IS THE FIX
     else:
@@ -132,7 +140,7 @@ async def auth_callback(
             access_token=access_token,
             scope=scope,
             is_active=True,
-            installed_at=utc_now(),
+            installed_at=to_naive_utc(utc_now()),
         )
         session.add(store)
 
