@@ -47,7 +47,7 @@ def verify_hmac(query_params: dict, received_hmac: str) -> bool:
     return hmac.compare_digest(generated, received_hmac)
 
 
-@router.get("/auth")
+@router.get("/")
 async def auth(shop: str):
     if not shop:
         raise HTTPException(status_code=400, detail="Missing shop")
