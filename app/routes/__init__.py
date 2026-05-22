@@ -3,5 +3,6 @@ from .sync_shopify import router as sync_shopify
 from .product import router as product
 from .shopify_oauth import router as shopify_oauth
 from .gdpr import router as gdpr
+from .dashboard import router as dashboard
 
-routers = [sync_shopify, product, shopify_oauth, gdpr]
+routers = [sync_shopify, product, shopify_oauth, gdpr, dashboard]
