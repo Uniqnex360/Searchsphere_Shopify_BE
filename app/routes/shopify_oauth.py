@@ -59,7 +59,7 @@ async def check_shop_exits():
     return {"shop": False, "installed": False}
 
 
-@router.get("/")
+@router.get("/auth/")
 async def auth(shop: str):
     if not shop:
         raise HTTPException(status_code=400, detail="Missing shop")
