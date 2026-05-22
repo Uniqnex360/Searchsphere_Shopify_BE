@@ -54,6 +54,11 @@ def verify_hmac(query_params: dict, received_hmac: str) -> bool:
     return hmac.compare_digest(generated, received_hmac)
 
 
+@router.get("/shop-status/")
+async def check_shop_exits():
+    return {"shop": False, "installed": False}
+
+
 @router.get("/")
 async def auth(shop: str):
     if not shop:
