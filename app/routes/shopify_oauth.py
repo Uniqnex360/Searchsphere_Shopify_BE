@@ -59,6 +59,7 @@ async def check_shop_exits():
     return {"shop": False, "installed": False}
 
 
+@router.get("/auth")
 @router.get("/auth/")
 async def auth(shop: str):
     if not shop:
@@ -74,7 +75,11 @@ async def auth(shop: str):
         "state": state,
     }
 
+    print(params)
+
     install_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
+
+    print("install url", install_url)
 
     return RedirectResponse(install_url)
 
