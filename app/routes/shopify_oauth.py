@@ -71,7 +71,7 @@ async def auth(shop: str):
     params = {
         "client_id": SHOPIFY_API_KEY,
         "scope": SHOPIFY_SCOPES,
-        "redirect_uri": f"{BACKEND_URL}/shopify/auth/callback",
+        "redirect_uri": f"{BACKEND_URL}/auth/callback",
         "state": state,
     }
 
