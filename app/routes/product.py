@@ -19,6 +19,7 @@ def get_product_auto_suggestion(
     es: Elasticsearch = Depends(get_es),
     session: ShopifySession = Depends(verify_shopify_token),
 ):
+    print(session, session.shop, session.user_id)
     """
     Fast autocomplete with:
     - search_as_you_type
