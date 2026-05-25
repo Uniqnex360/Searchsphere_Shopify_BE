@@ -26,10 +26,11 @@ def sync_shopify_to_post_es(
     store_id = get_store_id_by_shop_sync(
         shop_domain=shopify_session.shop, db_session=session
     )
+    print("store id", store_id)
     store = session.execute(
         select(Store).where(Store.id == store_id)
     ).scalar_one_or_none()
-
+    print("store id", store_id)
     if not store:
         return {
             "status": "error",
