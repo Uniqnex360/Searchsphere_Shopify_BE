@@ -352,8 +352,10 @@ def get_products(
         "track_total_hits": True,
         "_source": {"excludes": ["embedding"]},
         "query": {
-            "filter": [{"term": {"store_id": store_id}}],
-            "bool": {"must": (must_queries if must_queries else [{"match_all": {}}])},
+            "bool": {
+                "filter": [{"term": {"store_id": store_id}}],
+                "must": must_queries if must_queries else [{"match_all": {}}],
+            }
         },
     }
 
