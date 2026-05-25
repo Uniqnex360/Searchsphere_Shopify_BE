@@ -210,10 +210,6 @@ def get_products(
         must_queries.append(
             {
                 "bool": {
-                    # ====================================
-                    # # MULTI TENANT FILTER
-                    # # ====================================
-                    "filter": [{"term": {"store_id": store_id}}],
                     "should": [
                         {
                             "multi_match": {
@@ -356,7 +352,8 @@ def get_products(
         "track_total_hits": True,
         "_source": {"excludes": ["embedding"]},
         "query": {
-            "bool": {"must": (must_queries if must_queries else [{"match_all": {}}])}
+            "filter": [{"term": {"store_id": store_id}}],
+            "bool": {"must": (must_queries if must_queries else [{"match_all": {}}])},
         },
     }
 
