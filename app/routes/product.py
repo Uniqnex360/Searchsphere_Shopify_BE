@@ -1,12 +1,14 @@
 from typing import Optional, List
 from elasticsearch import Elasticsearch
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 
 from app.services.product_index import generate_embedding
+from app.services.product import build_product_response
 from app.helpers import get_es, get_store_id_by_shop_sync
 from app.auth import ShopifySession, verify_shopify_token
 from app.database import get_sync_session
+from app.models import Product
 
 router = APIRouter()
 
@@ -540,3 +542,19 @@ def get_products(
         "products": products,
         "facets": response.get("aggregations", {}),
     }
+
+
+# =========================================================
+# PRODUCT DETAIL API
+# =========================================================
+@router.get("/products/{product_id}/")
+def get_product_detail(
+    product_id: int,
+    session: Session = Depends(get_sync_session),
+):
+    product = session.get(Product, product_id)
+    print("product", product, product_id)
+    if not product or not product.is_active or product.is_deleted:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return build_product_response(product, session)
