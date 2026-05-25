@@ -146,6 +146,7 @@ async def auth_callback(
     token_data = response.json()
     access_token = token_data.get("access_token")
     scope = token_data.get("scope", "")
+    print("NEW TOKEN RECEIVED:", access_token)
 
     if not access_token:
         raise HTTPException(status_code=400, detail="Missing access token")
