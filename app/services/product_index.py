@@ -457,6 +457,7 @@ def build_product_document(
     options,
     collections,
     variant_option_values_map,
+    store,
 ) -> Dict[str, Any]:
     all_skus = []
     all_option_values = []
@@ -516,7 +517,7 @@ def build_product_document(
 
     return {
         "id": product.id,
-        "store_id": product.store_id,
+        "store_id": store.id,
         "shopify_product_id": product.shopify_product_id,
         "title": product.title,
         "vendor": product.vendor,
@@ -615,6 +616,7 @@ def sync_shopify_to_elasticsearch(
                 options=data["options"],
                 collections=data["collections"],
                 variant_option_values_map=data["variant_option_values_map"],
+                store=store,
             )
 
             # =============================================
