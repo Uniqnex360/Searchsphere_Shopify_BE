@@ -5,7 +5,8 @@
 import requests
 from typing import List, Dict, Any
 
-SHOPIFY_GRAPHQL_URL = "https://{shop}/admin/api/2024-10/graphql.json"
+# SHOPIFY_GRAPHQL_URL = "https://{shop}/admin/api/2024-10/graphql.json"
+SHOPIFY_GRAPHQL_URL = "https://{shop}/admin/api/2025-01/graphql.json"
 
 
 def fetch_shopify_products(
