@@ -1,12 +1,12 @@
 from typing import Optional, List
 from elasticsearch import Elasticsearch
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Session
 
 from app.services.product_index import generate_embedding
 from app.helpers import get_es, get_store_id_by_shop_sync
 from app.auth import ShopifySession, verify_shopify_token
-from app.database import get_session
+from app.database import get_sync_session
 
 router = APIRouter()
 
@@ -16,7 +16,7 @@ router = APIRouter()
 # ==========================================
 @router.get("/product/autocomplete/")
 def get_product_auto_suggestion(
-    db: AsyncSession = Depends(get_session),
+    db: Session = Depends(get_sync_session),
     q: str = Query(..., min_length=1),
     limit: int = Query(10, le=20),
     es: Elasticsearch = Depends(get_es),
@@ -195,7 +195,7 @@ def get_products(
     # VECTOR SEARCH
     # =====================================================
     es: Elasticsearch = Depends(get_es),
-    db: AsyncSession = Depends(get_session),
+    db: Session = Depends(get_sync_session),
     session: ShopifySession = Depends(verify_shopify_token),
 ):
     store_id = get_store_id_by_shop_sync(shop_domain=session.shop, db_session=db)
