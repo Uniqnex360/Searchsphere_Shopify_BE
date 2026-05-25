@@ -369,7 +369,7 @@ def generate_embedding(text: str) -> List[float]:
     return embedding_model.encode(text).tolist()
 
 
-def transform_shopify_product(node: Dict[str, Any]):
+def transform_shopify_product(node: Dict[str, Any], db_product):
     class Obj:
         pass
 
@@ -377,9 +377,8 @@ def transform_shopify_product(node: Dict[str, Any]):
         return int(x.split("/")[-1])
 
     product = Obj()
-    product.id = gid(node["id"])
-    product.store_id = 1
-    product.shopify_product_id = product.id
+    product.id = db_product.id
+    product.shopify_product_id = gid(node["id"])
 
     product.title = node.get("title")
     product.handle = node.get("handle")
@@ -516,6 +515,7 @@ def build_product_document(
     embedding = generate_embedding(search_text)
 
     return {
+        "postgres_id": product.id,
         "id": product.id,
         "store_id": store.id,
         "shopify_product_id": product.shopify_product_id,
@@ -561,7 +561,7 @@ def build_product_document(
 def upsert_product_document(es, index: str, document: Dict[str, Any]):
     return es.update(
         index=index,
-        id=document["id"],
+        id=str(document["postgres_id"]),
         doc=document,
         doc_as_upsert=True,
         refresh=False,
@@ -597,7 +597,7 @@ def sync_shopify_to_elasticsearch(
             # DATABASE SYNC
             # =============================================
 
-            sync_product_to_database(
+            db_product = sync_product_to_database(
                 session=session,
                 store=store,
                 node=node,
@@ -607,7 +607,7 @@ def sync_shopify_to_elasticsearch(
             # ELASTICSEARCH DOCUMENT
             # =============================================
 
-            data = transform_shopify_product(node)
+            data = transform_shopify_product(node, db_product)
 
             doc = build_product_document(
                 product=data["product"],
