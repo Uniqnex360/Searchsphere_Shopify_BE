@@ -55,8 +55,25 @@ def verify_hmac(query_params: dict, received_hmac: str) -> bool:
 
 
 @router.get("/shop-status/")
-async def check_shop_exits():
-    return {"shop": False, "installed": False}
+async def check_shop_exists(
+    shop: str,
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.exec(select(Store).where(Store.shop_domain == shop))
+
+    store = result.first()
+
+    if not store:
+        return {
+            "shop": shop,
+            "installed": False,
+        }
+
+    return {
+        "shop": shop,
+        "installed": True,
+        "active": store.is_active,
+    }
 
 
 @router.get("/auth")
