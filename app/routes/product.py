@@ -3,7 +3,7 @@ from elasticsearch import Elasticsearch
 from fastapi import APIRouter, Depends, Query
 
 from app.services.product_index import generate_embedding
-from app.helpers import get_es
+from app.helpers import get_es, get_store_id_by_shop
 from app.auth import ShopifySession, verify_shopify_token
 
 router = APIRouter()
@@ -20,6 +20,7 @@ def get_product_auto_suggestion(
     session: ShopifySession = Depends(verify_shopify_token),
 ):
     print(session, session.shop, session.user_id)
+    store_id = get_store_id_by_shop(shop_domain=session.shop)
     """
     Fast autocomplete with:
     - search_as_you_type
@@ -42,6 +43,10 @@ def get_product_auto_suggestion(
         ],
         "query": {
             "bool": {
+                # ====================================
+                # # MULTI TENANT FILTER
+                # # ====================================
+                "filter": [{"term": {"store_id": store_id}}],
                 "should": [
                     # ====================================
                     # BEST autocomplete field
@@ -189,6 +194,7 @@ def get_products(
     es: Elasticsearch = Depends(get_es),
     session: ShopifySession = Depends(verify_shopify_token),
 ):
+    store_id = get_store_id_by_shop(shop_domain=session.shop)
     offset = (page - 1) * size
 
     # =====================================================
@@ -200,6 +206,10 @@ def get_products(
         must_queries.append(
             {
                 "bool": {
+                    # ====================================
+                    # # MULTI TENANT FILTER
+                    # # ====================================
+                    "filter": [{"term": {"store_id": store_id}}],
                     "should": [
                         {
                             "multi_match": {
