@@ -90,6 +90,7 @@ async def auth(shop: str):
         "scope": SHOPIFY_SCOPES,
         "redirect_uri": f"{BACKEND_URL}/auth/callback",
         "state": state,
+        "grant_options[]": "offline",
     }
 
     print(params)

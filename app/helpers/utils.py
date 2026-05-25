@@ -2,8 +2,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models import Store
-
 
 STORE_CACHE = {}
 
@@ -15,6 +13,8 @@ def get_store_id_by_shop_sync(
     shop_domain: str,
     db_session: Session,
 ) -> int | None:
+    from app.models.store import Store
+
     if shop_domain in STORE_CACHE:
         return STORE_CACHE[shop_domain]
 
@@ -34,6 +34,8 @@ async def get_store_id_by_shop(
     shop_domain: str,
     db_session: AsyncSession,
 ) -> int | None:
+    from app.models.store import Store
+
     if shop_domain in STORE_CACHE:
         return STORE_CACHE[shop_domain]
 
