@@ -35,7 +35,7 @@ async def dashboard_summary(
     # =====================================
     # GET STORE ID
     # =====================================
-    store_id = await get_store_id_by_shop(shop_domain=session.shop)
+    store_id = await get_store_id_by_shop(shop_domain=session.shop, db_session=db)
 
     if not store_id:
         raise HTTPException(
