@@ -132,10 +132,11 @@ async def auth_callback(
         "client_id": SHOPIFY_API_KEY,
         "client_secret": SHOPIFY_API_SECRET,
         "code": code,
+        "grant_type": "authorization_code",
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(token_url, json=payload)
+        response = await client.post(token_url, data=payload)
 
     if response.status_code != 200:
         raise HTTPException(
