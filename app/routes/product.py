@@ -1,7 +1,7 @@
 from typing import Optional, List
 from elasticsearch import Elasticsearch
 from fastapi import APIRouter, Depends, Query
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 
 from app.services.product_index import generate_embedding
 from app.helpers import get_es, get_store_id_by_shop_sync
