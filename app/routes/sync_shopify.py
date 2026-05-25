@@ -40,6 +40,7 @@ def sync_shopify_to_post_es(
     sync_shopify_to_elasticsearch(
         session=session,
         store=store,
+        shopify_session=shopify_session,
     )
 
     return {

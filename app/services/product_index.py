@@ -575,12 +575,13 @@ def upsert_product_document(es, index: str, document: Dict[str, Any]):
 def sync_shopify_to_elasticsearch(
     session: Session,
     store: Store,
+    shopify_session,
     batch_size: int = 50,
 ):
     print(store.shop_domain, store.access_token)
     products = fetch_shopify_products(
-        shop=store.shop_domain,
-        access_token=store.access_token,
+        shop=shopify_session.shop,
+        access_token=shopify_session.access_token,
         first=batch_size,
     )
 
